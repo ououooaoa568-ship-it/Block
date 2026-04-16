@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Modern Messenger</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* =========================================
+       CSS ПЕРЕМЕННЫЕ (СВЕТЛЯ/ТЕМНАЯ ТЕМА)
+       ========================================= */
+    :root {
+      --bg-color: #f0f4f8;
+      --panel-bg: rgba(255, 255, 255, 0.85);
+      --panel-blur: blur(12px);
+      --text-main: #1a1a1a;
+      --text-muted: #6b7280;
+      --border-color: rgba(226, 232, 240, 0.8);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --msg-sent: #3b82f6;
+      --msg-sent-text: #ffffff;
+      --msg-recv: #ffffff;
+      --msg-recv-text: #1a1a1a;
+      --danger: #ef4444;
+      --shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      --chat-bg-img: none;
+      --sidebar-width: 320px;
+    }
+
+    body.dark-theme {
+      --bg-color: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: rgba(51, 65, 85, 0.8);
+      --primary: #60a5fa;
+      --primary-hover: #3b82f6;
+      --msg-sent: #3b82f6;
+      --msg-sent-text: #ffffff;
+      --msg-recv: #1e293b;
+      --msg-recv-text: #f8fafc;
+      --shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Кастомный скроллбар */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.4s ease;
+      overflow: hidden;
+    }
+
+    .hidden { display: none !important; }
+
+    /* =========================================
+       АВТОРИЗАЦИЯ (АНИМИРОВАННЫЙ ФОН)
+       ========================================= */
+    .auth-wrapper {
+      width: 100%; height: 100%;
+      display: flex; justify-content: center; align-items: center;
+      background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+      overflow-y: auto;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .auth-container {
+      background-color: var(--panel-bg);
+      backdrop-filter: var(--panel-blur);
+      -webkit-backdrop-filter: var(--panel-blur);
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      width: 90%; max-width: 400px;
+      text-align: center;
+      transform: translateY(0);
+      animation: floatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 20px 0;
+    }
+
+    @keyframes floatUp { 
+      from { opacity: 0; transform: translateY(40px) scale(0.95); } 
+      to { opacity: 1; transform: translateY(0) scale(1); } 
+    }
+
+    .auth-container h2 { margin-bottom: 30px; font-weight: 700; letter-spacing: -0.5px; }
+    
+    .input-group { position: relative; margin-bottom: 20px; }
+    .input-group i {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); transition: color 0.3s;
+    }
+    
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 16px 16px 16px 48px;
+      border: 2px solid var(--border-color);
+      border-radius: 16px;
+      background-color: rgba(255,255,255,0.05);
+      color: var(--text-main);
+      font-size: 15px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    input:focus { 
+      border-color: var(--primary); 
+      outline: none; 
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
+      background-color: var(--bg-color);
+    }
+    input:focus + i { color: var(--primary); }
+
+    .btn {
+      width: 100%; padding: 16px;
+      border: none; border-radius: 16px;
+      font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
+      cursor: pointer; transition: all 0.3s ease;
+      display: flex; justify-content: center; align-items: center; gap: 10px;
+      position: relative; overflow: hidden;
+    }
+    .btn-primary { 
+      background-color: var(--primary); color: white; 
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    }
+    .btn-primary:hover { 
+      background-color: var(--primary-hover); 
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+    .btn-primary:active { transform: translateY(1px); }
+    
+    .switch-link { margin-top: 25px; color: var(--text-muted); cursor: pointer; font-size: 14px; display: inline-block; transition: color 0.2s; }
+    .switch-link:hover { color: var(--primary); }
+    .error-msg { color: var(--danger); font-size: 13px; margin-top: 15px; min-height: 20px; font-weight: 500; animation: shake 0.4s; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    /* Капча */
+    .captcha-box { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+    .captcha-canvas-wrap { position: relative; width: 120px; height: 50px; border-radius: 12px; overflow: hidden; border: 2px solid var(--border-color); flex-shrink: 0; }
+    #captcha-canvas { width: 100%; height: 100%; display: block; }
+    .captcha-input { flex-grow: 1; }
+
+    /* =========================================
+       ГЛАВНОЕ ПРИЛОЖЕНИЕ (GLASSMORPHISM)
+       ========================================= */
+    #app-section {
+      display: flex; width: 100%; height: 100vh;
+      background-color: var(--bg-color);
+      position: relative;
+      overflow: hidden; /* Важно для мобилок */
+    }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--panel-bg);
+      backdrop-filter: var(--panel-blur);
+      -webkit-backdrop-filter: var(--panel-blur);
+      border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column;
+      z-index: 10;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .my-profile-btn {
+      display: flex; align-items: center; gap: 12px; cursor: pointer;
+      padding: 8px; border-radius: 12px; transition: background 0.2s;
+    }
+    .my-profile-btn:hover { background-color: var(--border-color); }
+    
+    .avatar {
+      width: 44px; height: 44px; border-radius: 18px;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white;
+      display: flex; justify-content: center; align-items: center;
+      font-weight: bold; font-size: 18px; object-fit: cover;
+      background-size: cover; background-position: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar-actions button {
+      background: none; border: none; font-size: 20px; color: var(--text-muted);
+      cursor: pointer; padding: 10px; border-radius: 50%; transition: all 0.2s;
+    }
+    .sidebar-actions button:hover { background-color: var(--border-color); color: var(--primary); transform: rotate(5deg) scale(1.1); }
+
+    .friends-list { flex-grow: 1; overflow-y: auto; list-style: none; padding: 10px 0; }
+    
+    .friend-item {
+      padding: 12px 20px; display: flex; align-items: center;
+      cursor: pointer; transition: all 0.2s ease; margin: 0 10px; border-radius: 16px;
+    }
+    .friend-item:hover { background-color: rgba(59, 130, 246, 0.08); transform: translateX(4px); }
+    .friend-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+    .friend-item.active .text-muted { color: rgba(255,255,255,0.8); }
+    .friend-item.active .friend-last-msg { color: rgba(255,255,255,0.9); }
+    
+    .friend-info { margin-left: 15px; flex-grow: 1; overflow: hidden; }
+    .friend-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .friend-last-msg { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; transition: color 0.2s;}
+
+    /* ЧАТ */
+    .chat-area {
+      flex-grow: 1; display: flex; flex-direction: column;
+      position: relative; background-color: var(--bg-color);
+      background-image: var(--chat-bg-img);
+      background-size: cover; background-position: center;
+    }
+    
+    .chat-area::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg-color); filter: brightness(0.95); z-index: 0; opacity: 0.85;
+      transition: all 0.4s;
+    }
+    body.dark-theme .chat-area::before { background: var(--bg-color); filter: brightness(0.4); opacity: 0.9; }
+
+    .chat-header {
+      padding: 15px 20px; background-color: var(--panel-bg);
+      backdrop-filter: var(--panel-blur); -webkit-backdrop-filter: var(--panel-blur);
+      border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 1; box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    }
+
+    .chat-header-info { display: flex; align-items: center; gap: 15px; cursor: pointer; transition: opacity 0.2s; }
+    .chat-header-info:hover { opacity: 0.8; }
+    .back-btn { display: none; background: none; border: none; font-size: 20px; color: var(--primary); cursor: pointer; padding-right: 10px;}
+
+    .messages-container {
+      flex-grow: 1; padding: 20px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px; z-index: 1; scroll-behavior: smooth;
+    }
+
+    /* Анимация появления сообщений */
+    .message {
+      max-width: 70%; padding: 12px 16px; border-radius: 20px;
+      font-size: 15px; line-height: 1.5; position: relative; word-wrap: break-word;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      opacity: 0;
+    }
+    
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(15px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .message.sent {
+      align-self: flex-end; background: linear-gradient(135deg, var(--msg-sent), #60a5fa); 
+      color: var(--msg-sent-text);
+      border-bottom-right-radius: 4px;
+      transform-origin: bottom right;
+    }
+    .message.received {
+      align-self: flex-start; background-color: var(--msg-recv); color: var(--msg-recv-text);
+      border-bottom-left-radius: 4px; border: 1px solid var(--border-color);
+      transform-origin: bottom left;
+    }
+    .message img { max-width: 100%; border-radius: 14px; margin-bottom: 6px; display: block; cursor: pointer; transition: transform 0.2s; }
+    .message img:hover { transform: scale(1.02); }
+    .message-time { font-size: 11px; opacity: 0.7; display: block; text-align: right; margin-top: 6px; font-weight: 500;}
+
+    .chat-input-area {
+      padding: 15px 20px; background-color: var(--panel-bg);
+      backdrop-filter: var(--panel-blur); -webkit-backdrop-filter: var(--panel-blur);
+      border-top: 1px solid var(--border-color); display: flex; gap: 12px; z-index: 1; align-items: center;
+    }
+
+    .attach-btn {
+      background: rgba(107, 114, 128, 0.1); border: none; color: var(--text-muted); 
+      width: 44px; height: 44px; border-radius: 50%; cursor: pointer; transition: all 0.2s;
+      display: flex; justify-content: center; align-items: center; font-size: 20px;
+    }
+    .attach-btn:hover { background: rgba(59, 130, 246, 0.1); color: var(--primary); transform: rotate(15deg); }
+
+    .chat-input-area input[type="text"] {
+      flex-grow: 1; border-radius: 24px; padding: 14px 20px; margin: 0; 
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color); color: var(--text-main); font-size: 15px;
+      transition: all 0.3s;
+    }
+    .chat-input-area input[type="text"]:focus {
+      border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .send-btn {
+      background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white; border: none; border-radius: 50%;
+      width: 48px; height: 48px; display: flex; justify-content: center; align-items: center;
+      cursor: pointer; font-size: 18px; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+    .send-btn:hover { transform: scale(1.1) rotate(-10deg); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4); }
+    .send-btn:active { transform: scale(0.95); }
+
+    .empty-chat {
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      height: 100%; color: var(--text-muted); font-size: 16px; text-align: center; z-index: 1;
+      background-color: var(--panel-bg); backdrop-filter: var(--panel-blur); border-radius: 24px; 
+      padding: 40px; margin: auto; max-width: 80%; box-shadow: var(--shadow); border: 1px solid var(--border-color);
+      animation: floatUp 0.5s ease-out;
+    }
+    .empty-chat i { font-size: 56px; color: var(--primary); margin-bottom: 20px; opacity: 0.8; background: -webkit-linear-gradient(#3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+
+    /* =========================================
+       МОДАЛЬНЫЕ ОКНА
+       ========================================= */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: all 0.3s ease;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    
+    .modal-content {
+      background-color: var(--panel-bg); width: 90%; max-width: 420px;
+      border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden;
+      transform: scale(0.9) translateY(20px); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+      display: flex; flex-direction: column; border: 1px solid var(--border-color);
+    }
+    .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
+
+    .modal-header {
+      padding: 18px 24px; border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 18px;
+    }
+    .close-modal { background: rgba(107, 114, 128, 0.1); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    .close-modal:hover { background: var(--danger); color: white; transform: rotate(90deg); }
+    
+    .modal-body { padding: 24px; overflow-y: auto; max-height: 70vh; }
+
+    /* Специфично для профиля */
+    .profile-banner { height: 140px; background: linear-gradient(135deg, #3b82f6, #ec4899); background-size: cover; background-position: center; }
+    .profile-avatar-wrap { text-align: center; margin-top: -60px; position: relative; }
+    .profile-avatar { width: 120px; height: 120px; border: 6px solid var(--panel-bg); border-radius: 30px; margin: 0 auto; background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white; display: flex; justify-content: center; align-items: center; font-size: 42px; object-fit: cover; box-shadow: 0 8px 16px rgba(0,0,0,0.15); transition: transform 0.3s; }
+    .profile-avatar:hover { transform: translateY(-5px); }
+    .profile-name { text-align: center; font-size: 24px; font-weight: 800; margin-top: 12px; letter-spacing: -0.5px;}
+    .profile-bio { text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 6px; padding: 0 20px; line-height: 1.4;}
+
+    .settings-group { margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+    .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-weight: 500;}
+    
+    .file-input-wrapper { position: relative; overflow: hidden; display: block; width: 100%; margin-bottom: 12px; }
+    .file-input-wrapper input[type="file"] { position: absolute; left: 0; top: 0; right: 0; bottom: 0; opacity: 0; cursor: pointer; z-index: 10; width: 100%; height: 100%; }
+    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); font-weight: 600; transition: all 0.2s; position: relative; z-index: 1;}
+    .file-input-wrapper:hover .btn-outline { background: rgba(59, 130, 246, 0.1); transform: translateY(-2px); }
+
+    /* Полноэкранный просмотр изображений */
+    #image-viewer {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(10px);
+      display: flex; justify-content: center; align-items: center; z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    #image-viewer.active { opacity: 1; pointer-events: all; }
+    #image-viewer img { max-width: 90%; max-height: 90%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    #image-viewer.active img { transform: scale(1); }
+    #image-viewer .close-btn { position: absolute; top: 30px; right: 40px; color: white; font-size: 40px; cursor: pointer; transition: transform 0.2s; }
+    #image-viewer .close-btn:hover { transform: scale(1.2) rotate(90deg); }
+
+    /* Тоггл темы */
+    .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    /* Результаты поиска */
+    .search-result-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(59,130,246,0.05); border-radius: 16px; border: 1px solid var(--border-color); transition: 0.2s; }
+    .search-result-item:hover { background: rgba(59,130,246,0.1); transform: translateY(-2px); }
+
+    /* =========================================
+       МЕДИА ЗАПРОСЫ (ТЕЛЕФОНЫ) - ИСПРАВЛЕНО!
+       ========================================= */
+    @media (max-width: 768px) {
+      .sidebar { 
+        width: 100%; position: absolute; top: 0; left: 0; height: 100%; z-index: 10; 
+      }
+      .chat-area { 
+        width: 100%; position: absolute; top: 0; left: 0; height: 100%; 
+        z-index: 20; transform: translateX(100%); 
+        transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1); 
+      }
+      body.chat-active .sidebar { transform: translateX(-30%); opacity: 0.5; }
+      body.chat-active .chat-area { transform: translateX(0); }
+      .back-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="auth-section" class="auth-wrapper">
+    <div id="login-container" class="auth-container">
+      <h2><i class="fa-brands fa-telegram" style="color:var(--primary); font-size: 42px; display: block; margin-bottom: 15px;"></i> Вход</h2>
+      <div class="input-group">
+        <i class="fa-solid fa-user"></i>
+        <input type="text" id="login-username" placeholder="Логин">
+      </div>
+      <div class="input-group">
+        <i class="fa-solid fa-lock"></i>
+        <input type="password" id="login-password" placeholder="Пароль">
+      </div>
+      <button id="btn-login" class="btn btn-primary">Войти <i class="fa-solid fa-arrow-right"></i></button>
+      <span class="switch-link" id="go-to-register">Нет аккаунта? Создать</span>
+      <div id="login-error" class="error-msg"></div>
+    </div>
+
+    <div id="register-container" class="auth-container hidden">
+      <h2>Регистрация</h2>
+      <div class="input-group">
+        <i class="fa-solid fa-user"></i>
+        <input type="text" id="reg-username" placeholder="Придумайте логин">
+      </div>
+      <div class="input-group">
+        <i class="fa-solid fa-lock"></i>
+        <input type="password" id="reg-password" placeholder="Придумайте пароль">
+      </div>
+      
+      <div class="captcha-box">
+        <div class="captcha-canvas-wrap">
+          <canvas id="captcha-canvas" width="120" height="50"></canvas>
+        </div>
+        <button type="button" onclick="generateCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-muted); transition: 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+        <div class="captcha-input input-group" style="margin-bottom: 0;">
+          <input type="text" id="reg-captcha" placeholder="Код" style="padding-left: 16px;">
+        </div>
+      </div>
+
+      <button id="btn-register" class="btn btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">Создать аккаунт <i class="fa-solid fa-check"></i></button>
+      <span class="switch-link" id="go-to-login">Уже есть аккаунт? Войти</span>
+      <div id="reg-error" class="error-msg"></div>
+    </div>
+  </div>
+
+  <div id="app-section" class="hidden">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="my-profile-btn" onclick="openMySettings()">
+          <div class="avatar" id="my-avatar-mini">U</div>
+          <div style="font-weight: 600; font-size: 16px;" id="my-name-mini">User</div>
+        </div>
+        <div class="sidebar-actions">
+          <button onclick="openSearchModal()" title="Найти друга"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+      </div>
+      <ul class="friends-list" id="friends-list"></ul>
+    </div>
+
+    <div class="chat-area">
+      <div id="no-chat-selected" class="empty-chat">
+        <i class="fa-regular fa-paper-plane"></i>
+        <p style="font-weight: 500;">Выберите чат или найдите друга,<br>чтобы начать общение</p>
+      </div>
+
+      <div id="active-chat" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="chat-header">
+          <div class="chat-header-info" onclick="openFriendProfile()">
+            <button class="back-btn" onclick="closeChatMobile(event)"><i class="fa-solid fa-angle-left"></i></button>
+            <div class="avatar" id="current-chat-avatar" style="width: 38px; height: 38px; font-size: 16px; border-radius: 12px;">F</div>
+            <div>
+              <div id="current-chat-name" style="font-weight: 600; font-size: 15px;">Имя</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Онлайн</div>
+            </div>
+          </div>
+          <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px; padding: 10px; border-radius: 50%; transition: 0.2s;" onclick="clearChatBg()" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'; this.style.color='var(--danger)'" onmouseout="this.style.background='none'; this.style.color='var(--text-muted)'"><i class="fa-solid fa-eraser" title="Сбросить фон чата"></i></button>
+        </div>
+        
+        <div class="messages-container" id="messages-container"></div>
+
+        <div class="chat-input-area">
+          <input type="file" id="image-upload-input" accept="image/*" class="hidden">
+          <button class="attach-btn" onclick="document.getElementById('image-upload-input').click()"><i class="fa-solid fa-paperclip"></i></button>
+          <input type="text" id="message-input" placeholder="Сообщение...">
+          <button id="btn-send" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="search-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Поиск людей</span>
+        <button class="close-modal" onclick="closeModal('search-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="search-username" placeholder="Начните вводить логин..." oninput="liveSearch()">
+        </div>
+        <div id="search-results" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Мой профиль</span>
+        <button class="close-modal" onclick="closeModal('settings-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="profile-banner" id="my-banner"></div>
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="my-avatar-large">U</div>
+        <div class="profile-name" id="my-profile-name">User</div>
+        <p class="profile-bio" id="my-profile-bio">Статус...</p>
+      </div>
+      <div class="modal-body">
+        <div class="file-input-wrapper">
+          <button class="btn btn-outline" style="width:100%" id="btn-upload-avatar"><i class="fa-solid fa-camera"></i> Изменить аватар</button>
+          <input type="file" accept="image/*" onchange="uploadAvatar(this)">
+        </div>
+        <div class="file-input-wrapper">
+          <button class="btn btn-outline" style="width:100%" id="btn-upload-banner"><i class="fa-solid fa-image"></i> Изменить фон профиля</button>
+          <input type="file" accept="image/*" onchange="uploadBanner(this)">
+        </div>
+        
+        <div style="margin-top: 20px;">
+          <input type="text" id="bio-input" placeholder="Напишите статус (до 50 символов)..." style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main); margin-bottom:12px;">
+          <button class="btn btn-primary" onclick="saveBio()">Сохранить статус</button>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item">
+            <span>Темная тема</span>
+            <label class="switch">
+              <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 12px; margin-top: 10px;">
+            <span style="font-size: 14px; color: var(--text-muted);">Индивидуализация чата:</span>
+            <div class="file-input-wrapper">
+              <button class="btn btn-outline" style="width:100%" id="btn-upload-wallpaper"><i class="fa-solid fa-image"></i> Загрузить обои для текущего чата</button>
+              <input type="file" accept="image/*" onchange="uploadChatWallpaper(this)">
+            </div>
+          </div>
+        </div>
+        <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); margin-top: 25px;" onclick="logout()">Выйти из аккаунта <i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="friend-profile-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Профиль</span>
+        <button class="close-modal" onclick="closeModal('friend-profile-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="profile-banner" id="friend-banner"></div>
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="friend-avatar-large">F</div>
+        <div class="profile-name" id="friend-profile-name">Имя</div>
+        <p class="profile-bio" id="friend-profile-bio">Нет описания</p>
+      </div>
+      <div class="modal-body" style="text-align: center; padding-top: 10px;">
+         <p style="color: var(--primary); font-size: 14px; font-weight: 600; background: rgba(59, 130, 246, 0.1); padding: 8px 16px; border-radius: 20px; display: inline-block;">В списке контактов</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-viewer">
+    <span class="close-btn" onclick="document.getElementById('image-viewer').classList.remove('active')">&times;</span>
+    <img id="viewer-img" src="">
+  </div>
+
+  <script type="module">
+    // ДОБАВЛЕНЫ НОВЫЕ ФУНКЦИИ ИЗ FIREBASE DATABASE (query, orderByChild, startAt, endAt) ДЛЯ ПОИСКА
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getDatabase, ref, set, get, push, onValue, update, query, orderByChild, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyANNd5WX5n_SRl4usM0Iedxe0fb9IHi2Dg",
+      authDomain: "gram-c7ff2.firebaseapp.com",
+      projectId: "gram-c7ff2",
+      storageBucket: "gram-c7ff2.firebasestorage.app",
+      messagingSenderId: "704475853000",
+      appId: "1:704475853000:web:7e9cabc21345dd23f9b5fd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+
+    let currentUser = null;
+    let currentChatFriend = null;
+    let friendsData = {}; 
+
+    const authSection = document.getElementById('auth-section');
+    const loginContainer = document.getElementById('login-container');
+    const registerContainer = document.getElementById('register-container');
+    const appSection = document.getElementById('app-section');
+    
+    // --- КАПЧА ЛОГИКА ---
+    let currentCaptchaText = "";
+    
+    window.generateCaptcha = function() {
+      const canvas = document.getElementById('captcha-canvas');
+      const ctx = canvas.getContext('2d');
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Убрали похожие символы типа O и 0
+      
+      currentCaptchaText = "";
+      for(let i=0; i<6; i++) {
+        currentCaptchaText += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      // Рисуем фон
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Рисуем "шум" (линии)
+      for(let i=0; i<6; i++) {
+        ctx.strokeStyle = ['#f87171', '#60a5fa', '#34d399', '#a78bfa'][Math.floor(Math.random()*4)];
+        ctx.lineWidth = Math.random() * 2 + 1;
+        ctx.beginPath();
+        ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+        ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+        ctx.stroke();
+      }
+      
+      // Рисуем текст
+      ctx.font = 'bold 24px monospace';
+      ctx.fillStyle = '#1e293b';
+      
+      // Немного искажаем текст
+      ctx.setTransform(1, Math.random()*0.1 - 0.05, Math.random()*0.1 - 0.05, 1, 0, 0);
+      ctx.fillText(currentCaptchaText, 15, 34);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Сброс трансформации
+    };
+
+    // Переключение форм
+    document.getElementById('go-to-register').onclick = () => {
+      loginContainer.style.animation = 'floatUp 0.3s reverse forwards';
+      setTimeout(() => {
+        loginContainer.classList.add('hidden'); 
+        loginContainer.style.animation = '';
+        registerContainer.classList.remove('hidden');
+        generateCaptcha(); // Генерируем капчу при открытии формы
+      }, 300);
+    };
+    document.getElementById('go-to-login').onclick = () => {
+      registerContainer.style.animation = 'floatUp 0.3s reverse forwards';
+      setTimeout(() => {
+        registerContainer.classList.add('hidden'); 
+        registerContainer.style.animation = '';
+        loginContainer.classList.remove('hidden');
+      }, 300);
+    };
+
+    async function authUser(action) {
+      const isLogin = action === 'login';
+      const usernameInput = document.getElementById(isLogin ? 'login-username' : 'reg-username').value.trim();
+      const passwordInput = document.getElementById(isLogin ? 'login-password' : 'reg-password').value.trim();
+      const errorDiv = document.getElementById(isLogin ? 'login-error' : 'reg-error');
+      const btn = document.getElementById(isLogin ? 'btn-login' : 'btn-register');
+      
+      errorDiv.textContent = '';
+      if (!usernameInput || !passwordInput) {
+        errorDiv.textContent = "Заполните все поля";
+        errorDiv.style.animation = 'none'; void errorDiv.offsetWidth; errorDiv.style.animation = 'shake 0.4s';
+        return;
+      }
+
+      // Проверка капчи при регистрации
+      if (!isLogin) {
+        const captchaInput = document.getElementById('reg-captcha').value.trim().toUpperCase();
+        if (captchaInput !== currentCaptchaText) {
+          errorDiv.textContent = "Неверный код с картинки";
+          errorDiv.style.animation = 'none'; void errorDiv.offsetWidth; errorDiv.style.animation = 'shake 0.4s';
+          generateCaptcha(); // Обновляем капчу при ошибке
+          return;
+        }
+      }
+      
+      const uid = usernameInput.toLowerCase();
+      const originalBtnText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Загрузка...';
+      btn.style.pointerEvents = 'none';
+
+      try {
+        const userRef = ref(db, `users/${uid}`);
+        const snapshot = await get(userRef);
+
+        if (isLogin) {
+          if (!snapshot.exists() || snapshot.val().password !== passwordInput) {
+            throw new Error("Неверный логин или пароль");
+          }
+          initApp(snapshot.val());
+        } else {
+          if (snapshot.exists()) throw new Error("Логин уже занят");
+          const newUser = { uid, username: usernameInput, password: passwordInput, bio: "", avatarUrl: "", bannerUrl: "" };
+          await set(userRef, newUser);
+          initApp(newUser);
+        }
+      } catch (error) { 
+        errorDiv.textContent = error.message.replace('Firebase: ', ''); 
+        errorDiv.style.animation = 'none'; void errorDiv.offsetWidth; errorDiv.style.animation = 'shake 0.4s';
+      } finally {
+        btn.innerHTML = originalBtnText;
+        btn.style.pointerEvents = 'auto';
+      }
+    }
+
+    document.getElementById('btn-login').onclick = () => authUser('login');
+    document.getElementById('btn-register').onclick = () => authUser('register');
+
+    function initApp(user) {
+      currentUser = user;
+      localStorage.setItem('messengerUser', JSON.stringify({uid: user.uid, password: user.password}));
+      
+      authSection.style.opacity = '0';
+      setTimeout(() => {
+        authSection.classList.add('hidden');
+        appSection.classList.remove('hidden');
+      }, 300);
+      
+      onValue(ref(db, `users/${user.uid}`), (snap) => {
+        if(snap.exists()) {
+          currentUser = snap.val();
+          updateMyProfileUI();
+        }
+      });
+
+      loadFriends();
+      loadTheme();
+    }
+
+    window.onload = async () => {
+      const saved = localStorage.getItem('messengerUser');
+      if (saved) {
+        const creds = JSON.parse(saved);
+        const snap = await get(ref(db, `users/${creds.uid}`));
+        if(snap.exists() && snap.val().password === creds.password) {
+          initApp(snap.val());
+        } else { localStorage.removeItem('messengerUser'); }
+      } else {
+        generateCaptcha(); // генерируем если мы на экране входа/реги
+      }
+    };
+
+    window.logout = function() {
+      localStorage.removeItem('messengerUser');
+      document.body.style.opacity = '0';
+      setTimeout(() => window.location.reload(), 300);
+    }
+
+    function updateMyProfileUI() {
+      const ava = currentUser.avatarUrl ? "" : currentUser.username.charAt(0).toUpperCase();
+      const avaStyle = currentUser.avatarUrl ? `background-image: url('${currentUser.avatarUrl}');` : "";
+      
+      document.getElementById('my-name-mini').textContent = currentUser.username;
+      document.getElementById('my-avatar-mini').textContent = ava;
+      document.getElementById('my-avatar-mini').style.cssText = avaStyle;
+
+      document.getElementById('my-profile-name').textContent = currentUser.username;
+      document.getElementById('my-avatar-large').textContent = ava;
+      document.getElementById('my-avatar-large').style.cssText = avaStyle;
+      document.getElementById('my-banner').style.backgroundImage = currentUser.bannerUrl ? `url('${currentUser.bannerUrl}')` : "";
+      document.getElementById('my-profile-bio').textContent = currentUser.bio || "Свободен для общения";
+      document.getElementById('bio-input').value = currentUser.bio || "";
+    }
+
+    window.saveBio = async function() {
+      const bio = document.getElementById('bio-input').value;
+      const btn = event.target;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Сохранено';
+      await update(ref(db, `users/${currentUser.uid}`), { bio });
+      setTimeout(() => btn.innerHTML = 'Сохранить статус', 2000);
+    }
+
+    async function uploadFileToStorage(file, path) {
+      const fileRef = storageRef(storage, `${path}/${currentUser.uid}_${Date.now()}`);
+      await uploadBytes(fileRef, file);
+      return await getDownloadURL(fileRef);
+    }
+
+    window.uploadAvatar = async function(input) {
+      if(!input.files[0]) return;
+      const btn = document.getElementById('btn-upload-avatar');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+      try {
+        const url = await uploadFileToStorage(input.files[0], 'avatars');
+        await update(ref(db, `users/${currentUser.uid}`), { avatarUrl: url });
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+      } catch(e) { 
+        alert("Ошибка загрузки. Проверьте правила Storage в Firebase!"); 
+        btn.innerHTML = origText;
+      }
+      setTimeout(() => btn.innerHTML = origText, 2000);
+    }
+
+    window.uploadBanner = async function(input) {
+      if(!input.files[0]) return;
+      const btn = document.getElementById('btn-upload-banner');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+      try {
+        const url = await uploadFileToStorage(input.files[0], 'banners');
+        await update(ref(db, `users/${currentUser.uid}`), { bannerUrl: url });
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+      } catch(e) { alert("Ошибка загрузки."); btn.innerHTML = origText; }
+      setTimeout(() => btn.innerHTML = origText, 2000);
+    }
+
+    // --- УМНЫЙ ПОИСК "НА ЛЕТУ" ---
+    window.liveSearch = async function() {
+      const input = document.getElementById('search-username').value.trim().toLowerCase();
+      const resultsDiv = document.getElementById('search-results');
+      resultsDiv.innerHTML = '';
+      
+      if (!input) return;
+      
+      // Ищем по ключу uid пользователей, начиная с введенного текста
+      const usersRef = ref(db, 'users');
+      const searchQuery = query(usersRef, orderByChild('uid'), startAt(input), endAt(input + "\uf8ff"));
+      
+      try {
+        const snap = await get(searchQuery);
+        if (snap.exists()) {
+          let foundCount = 0;
+          snap.forEach(child => {
+            const u = child.val();
+            // Не показываем самого себя
+            if(u.uid === currentUser.uid) return;
+            foundCount++;
+            
+            const ava = u.avatarUrl ? "" : u.username.charAt(0).toUpperCase();
+            const avaStyle = u.avatarUrl ? `background-image: url('${u.avatarUrl}'); background-size: cover;` : "";
+            
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            div.innerHTML = `
+              <div style="display:flex; align-items:center; gap: 12px;">
+                <div class="avatar" style="width: 40px; height: 40px; ${avaStyle}">${ava}</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 15px;">${u.username}</div>
+                  <div style="font-size: 12px; color: var(--text-muted)">Логин: @${u.uid}</div>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="width: auto; padding: 8px 14px; border-radius: 12px; font-size: 14px;" onclick="addNewFriend('${u.uid}')"><i class="fa-solid fa-user-plus"></i></button>
+            `;
+            resultsDiv.appendChild(div);
+          });
+          
+          if (foundCount === 0) {
+            resultsDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 10px;">Совпадений не найдено</p>';
+          }
+        } else {
+          resultsDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 10px;">Совпадений не найдено</p>';
+        }
+      } catch (e) {
+        console.error("Ошибка поиска", e);
+      }
+    }
+
+    window.addNewFriend = async function(friendUid) {
+      await update(ref(db, `users/${currentUser.uid}/friends/${friendUid}`), { addedAt: Date.now() });
+      await update(ref(db, `users/${friendUid}/friends/${currentUser.uid}`), { addedAt: Date.now() });
+      
+      closeModal('search-modal');
+      document.getElementById('search-username').value = '';
+      document.getElementById('search-results').innerHTML = '';
+    }
+
+    function loadFriends() {
+      onValue(ref(db, `users/${currentUser.uid}/friends`), (snap) => {
+        const list = document.getElementById('friends-list');
+        list.innerHTML = '';
+        if (snap.exists()) {
+          Object.keys(snap.val()).forEach(async friendUid => {
+            const fSnap = await get(ref(db, `users/${friendUid}`));
+            if(fSnap.exists()) {
+              friendsData[friendUid] = fSnap.val();
+              renderFriendItem(friendsData[friendUid]);
+            }
+          });
+        }
+      });
+    }
+
+    function renderFriendItem(friend) {
+      const list = document.getElementById('friends-list');
+      const li = document.createElement('li');
+      li.className = `friend-item ${currentChatFriend?.uid === friend.uid ? 'active' : ''}`;
+      li.id = `friend-item-${friend.uid}`;
+      
+      const ava = friend.avatarUrl ? "" : friend.username.charAt(0).toUpperCase();
+      const avaStyle = friend.avatarUrl ? `background-image: url('${friend.avatarUrl}');` : "";
+
+      li.innerHTML = `
+        <div class="avatar" style="${avaStyle}">${ava}</div>
+        <div class="friend-info">
+          <div class="friend-name">${friend.username}</div>
+          <div class="friend-last-msg" id="last-msg-${friend.uid}">Нажмите чтобы начать чат</div>
+        </div>
+      `;
+      li.onclick = () => openChat(friend);
+      list.appendChild(li);
+
+      const chatId = getChatId(currentUser.uid, friend.uid);
+      onValue(ref(db, `chats/${chatId}/lastMessage`), (mSnap) => {
+        if(mSnap.exists()) {
+          const m = mSnap.val();
+          const el = document.getElementById(`last-msg-${friend.uid}`);
+          if(el) el.innerHTML = m.type === 'image' ? '<i class="fa-solid fa-image"></i> Фотография' : m.text;
+        }
+      });
+    }
+
+    function getChatId(u1, u2) { return u1 < u2 ? `${u1}_${u2}` : `${u2}_${u1}`; }
+
+    window.openChat = function(friend) {
+      currentChatFriend = friend;
+      
+      document.getElementById('no-chat-selected').classList.add('hidden');
+      const activeChat = document.getElementById('active-chat');
+      activeChat.classList.remove('hidden');
+      activeChat.style.animation = 'popIn 0.3s ease-out';
+      
+      document.body.classList.add('chat-active'); 
+      
+      const ava = friend.avatarUrl ? "" : friend.username.charAt(0).toUpperCase();
+      const avaStyle = friend.avatarUrl ? `background-image: url('${friend.avatarUrl}');` : "";
+      document.getElementById('current-chat-avatar').textContent = ava;
+      document.getElementById('current-chat-avatar').style.cssText = avaStyle;
+      document.getElementById('current-chat-name').textContent = friend.username;
+
+      document.querySelectorAll('.friend-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(`friend-item-${friend.uid}`);
+      if(activeEl) activeEl.classList.add('active');
+
+      const chatId = getChatId(currentUser.uid, friend.uid);
+      
+      loadChatWallpaper(chatId);
+      
+      onValue(ref(db, `chats/${chatId}/messages`), (snap) => {
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
+        if (snap.exists()) {
+          const msgs = Object.values(snap.val()).sort((a,b) => a.timestamp - b.timestamp);
+          msgs.forEach((msg, index) => {
+            const div = document.createElement('div');
+            const isMe = msg.senderId === currentUser.uid;
+            div.className = `message ${isMe ? 'sent' : 'received'}`;
+            div.style.animationDelay = `${Math.min(index * 0.05, 0.5)}s`;
+            
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            if(msg.type === 'image') {
+              div.innerHTML = `<img src="${msg.url}" onclick="viewImage('${msg.url}')"><span class="message-time">${time}</span>`;
+            } else {
+              div.innerHTML = `${msg.text}<span class="message-time">${time}</span>`;
+            }
+            container.appendChild(div);
+          });
+          setTimeout(() => container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }), 100);
+        }
+      });
+    }
+
+    async function sendMessage(text = "", imageUrl = null) {
+      if (!currentChatFriend) return;
+      const chatId = getChatId(currentUser.uid, currentChatFriend.uid);
+      
+      const msgData = {
+        senderId: currentUser.uid,
+        timestamp: Date.now(),
+        type: imageUrl ? 'image' : 'text',
+        text: text,
+        url: imageUrl
+      };
+
+      try {
+        const msgRef = push(ref(db, `chats/${chatId}/messages`));
+        await set(msgRef, msgData);
+        await set(ref(db, `chats/${chatId}/lastMessage`), msgData);
+      } catch (e) { alert("Ошибка отправки"); }
+    }
+
+    document.getElementById('btn-send').onclick = () => {
+      const inp = document.getElementById('message-input');
+      if(inp.value.trim()) { 
+        sendMessage(inp.value.trim()); 
+        inp.value = ''; 
+        document.getElementById('messages-container').scrollTo({ top: document.getElementById('messages-container').scrollHeight, behavior: 'smooth' });
+      }
+    };
+    document.getElementById('message-input').onkeypress = (e) => {
+      if(e.key === 'Enter') document.getElementById('btn-send').click();
+    };
+
+    document.getElementById('image-upload-input').onchange = async function() {
+      if(!this.files[0]) return;
+      const btn = document.querySelector('.attach-btn');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const url = await uploadFileToStorage(this.files[0], 'chat_images');
+        sendMessage("", url);
+      } catch(e) { alert("Ошибка загрузки фото"); } finally {
+        btn.innerHTML = '<i class="fa-solid fa-paperclip"></i>';
+      }
+    }
+
+    window.uploadChatWallpaper = async function(input) {
+      if(!input.files[0] || !currentChatFriend) return alert("Сначала откройте чат, для которого хотите поменять фон");
+      const btn = document.getElementById('btn-upload-wallpaper');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+      try {
+        const url = await uploadFileToStorage(input.files[0], 'wallpapers');
+        const chatId = getChatId(currentUser.uid, currentChatFriend.uid);
+        await update(ref(db, `users/${currentUser.uid}/settings/wallpapers`), { [chatId]: url });
+        document.documentElement.style.setProperty('--chat-bg-img', `url('${url}')`);
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Обои установлены';
+      } catch(e) { alert("Ошибка загрузки"); btn.innerHTML = origText; }
+      setTimeout(() => btn.innerHTML = origText, 2000);
+    }
+
+    window.clearChatBg = async function() {
+       if(!currentChatFriend) return;
+       const chatId = getChatId(currentUser.uid, currentChatFriend.uid);
+       await update(ref(db, `users/${currentUser.uid}/settings/wallpapers`), { [chatId]: null });
+       document.documentElement.style.setProperty('--chat-bg-img', `none`);
+    }
+
+    function loadChatWallpaper(chatId) {
+       document.documentElement.style.setProperty('--chat-bg-img', `none`);
+       get(ref(db, `users/${currentUser.uid}/settings/wallpapers/${chatId}`)).then(snap => {
+         if(snap.exists() && snap.val()) {
+           document.documentElement.style.setProperty('--chat-bg-img', `url('${snap.val()}')`);
+         }
+       });
+    }
+
+    window.closeChatMobile = function(e) {
+      e.stopPropagation();
+      document.body.classList.remove('chat-active');
+    }
+
+    window.openMySettings = () => document.getElementById('settings-modal').classList.add('active');
+    window.openSearchModal = () => document.getElementById('search-modal').classList.add('active');
+    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    
+    window.openFriendProfile = () => {
+      if(!currentChatFriend) return;
+      const f = friendsData[currentChatFriend.uid] || currentChatFriend;
+      
+      const ava = f.avatarUrl ? "" : f.username.charAt(0).toUpperCase();
+      const avaStyle = f.avatarUrl ? `background-image: url('${f.avatarUrl}');` : "";
+      
+      document.getElementById('friend-avatar-large').textContent = ava;
+      document.getElementById('friend-avatar-large').style.cssText = avaStyle;
+      document.getElementById('friend-banner').style.backgroundImage = f.bannerUrl ? `url('${f.bannerUrl}')` : "";
+      document.getElementById('friend-profile-name').textContent = f.username;
+      document.getElementById('friend-profile-bio').textContent = f.bio || "Нет описания";
+
+      document.getElementById('friend-profile-modal').classList.add('active');
+    }
+
+    window.viewImage = (url) => {
+      document.getElementById('viewer-img').src = url;
+      document.getElementById('image-viewer').classList.add('active');
+    }
+
+    window.toggleTheme = () => {
+      const isDark = document.getElementById('theme-toggle').checked;
+      if(isDark) document.body.classList.add('dark-theme');
+      else document.body.classList.remove('dark-theme');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function loadTheme() {
+      const theme = localStorage.getItem('theme');
+      if(theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        document.getElementById('theme-toggle').checked = true;
+      }
+    }
+  </script>
+</body>
+</html>
+
