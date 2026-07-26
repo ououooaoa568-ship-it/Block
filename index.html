@@ -496,7 +496,14 @@
                     <input type="text" id="add-title" placeholder="Например: Цех №4">
                 </div>
                 <div class="form-group">
-                    <label>Точка на карте (кликните для выбора)</label>
+                    <label>Точка на карте (кликните для выбора или введите адрес)</label>
+                    
+                    <div class="search-bar-ui" style="margin-bottom: 10px;">
+                        <input type="text" id="add-map-search-input" placeholder="Введите адрес для поиска на карте...">
+                        <button onclick="window.searchAddressForAddMap()">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        </button>
+                    </div>
                     
                     <div style="position: relative; width: 100%; height: 250px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
                         <div id="map-picker-container" style="border: none;"></div>
@@ -1271,6 +1278,29 @@
                 if(data && data.length > 0) {
                     mainMap.setCenter([data[0].lat, data[0].lon], 16, { checkZoomRange: true, duration: 1500 });
                 } else { alert('Улица не найдена.'); }
+            } catch (e) { console.error("Ошибка поиска", e); }
+        }
+        
+        window.searchAddressForAddMap = async function() {
+            const query = document.getElementById('add-map-search-input').value.trim();
+            if(!query) return;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Канск, Красноярский край`);
+                const data = await response.json();
+                if(data && data.length > 0) {
+                    const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                    addMap.setCenter(coords, 16, { checkZoomRange: true, duration: 1500 });
+                    
+                    document.getElementById('add-lat').value = coords[0];
+                    document.getElementById('add-lng').value = coords[1];
+                    document.getElementById('coords-display').innerText = `Координаты: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`;
+                    
+                    if (addMarker) addMarker.geometry.setCoordinates(coords);
+                    else {
+                        addMarker = new ymaps.Placemark(coords, {}, { preset: 'islands#redIcon' });
+                        addMap.geoObjects.add(addMarker);
+                    }
+                } else { alert('Улица или адрес не найдены.'); }
             } catch (e) { console.error("Ошибка поиска", e); }
         }
 
